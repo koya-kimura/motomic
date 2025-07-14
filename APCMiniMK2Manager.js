@@ -10,7 +10,7 @@ class APCMiniMK2Manager extends MIDIManager {
         this.gridRadioState_ = new Array(8).fill(0);  // 現在の押下状態
 
         // フェーダー関連の状態を管理する配列
-        this.faderValues_ = new Array(9).fill(1);             // 現在のフェーダー値
+        this.faderValues_ = new Array(9).fill(0);             // 現在のフェーダー値
         this.faderValuesPrev_ = new Array(9).fill(1);        // 前回のフェーダー値
         this.faderButtonState_ = new Array(9).fill(0);       // フェーダーボタンの押下状態
         this.faderButtonToggleState_ = new Array(9).fill(0); // フェーダーボタンのトグル状態
@@ -18,6 +18,7 @@ class APCMiniMK2Manager extends MIDIManager {
         // サイドボタンの状態を管理する配列
         this.sideButtonState_ = new Array(8).fill(0);        // サイドボタンの押下状態
         this.sideButtonToggleState_ = new Array(8).fill(0);  // サイドボタンのトグル状態
+        this.sideButtonRadioNum_ = 0;
     }
 
     /**
@@ -61,6 +62,7 @@ class APCMiniMK2Manager extends MIDIManager {
                 this.sideButtonState_[buttonIndex] = 1;
                 if (velocity > 0) {
                     this.sideButtonToggleState_[buttonIndex] = 1 - this.sideButtonToggleState_[buttonIndex];
+                    this.sideButtonRadioNum_ = buttonIndex; // ラジオボタンの状態を更新
                 }
             }
         }
@@ -97,9 +99,11 @@ class APCMiniMK2Manager extends MIDIManager {
         });
 
         // サイドボタンの状態を送信
-        this.sideButtonToggleState_.forEach((state, i) => {
-            this.midiOutput_.send([0x90, 112 + i, state * 127]);
-        });
+        for(let i = 0; i < 8; i++) {
+            const midiNote = 112 + i;
+            const state = this.sideButtonRadioNum_ === i ? 127 : 0; // ラジオボタンの状態を反映
+            this.midiOutput_.send([0x90, midiNote, state]);
+        }
 
         // グリッドの状態を送信
         for(let row = 0; row < 8; row++) {

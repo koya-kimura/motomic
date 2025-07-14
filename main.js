@@ -1,53 +1,78 @@
-let bpm = 130;
+const cp = ["#F15946", "#5681CB", "#FAAA2D", "#296647", "#453945"];
+const bpm = 130;
+const gvm = new GVM(bpm);
 let motionGroup;
 let mainTex;
+let uiTex;
 let scene = [];
-let isMonochrome = false;
+let sceneNum = 0;
 let midiManager;
-let bpmManager;
 let showUI = false;
-let pushCount = 0;
+
+let postShader;
+
+function preload() {
+    postShader = loadShader('shader/main.vert', 'shader/main.frag');
+}
+
 
 function setup() {
-    createCanvas(windowWidth, windowHeight);
+    createCanvas(windowWidth, windowHeight, WEBGL);
     mainTex = createGraphics(width, height);
+    uiTex = createGraphics(width, height);
 
     scene.push(new Scene1());
     scene.push(new Scene2());
+    scene.push(new Scene3());
+    scene.push(new Scene4());
+    scene.push(new Scene5());
+    scene.push(new Scene6());
+    scene.push(new Scene7());
 
     motionGroup = new MotionGroup(8, bpm);
 
     midiManager = new APCMiniMK2Manager();
     midiManager.initializeMIDIDevices();
 
-    bpmManager = new BPMManager(bpm, 8, 40000);
-
     noCursor();
 }
 
 function draw() {
-    if(midiManager.midiSuccess_) {
+    if (midiManager.midiSuccess_) {
         midiAssign();
     }
 
     background(0);
     mainTex.background(0);
 
-    scene[pushCount%scene.length].draw(mainTex, motionGroup.getAllValues());
-    image(mainTex, 0, 0, width, height);
+    const sceneIndex = midiManager.sideButtonRadioNum_ == 7 ? floor(gvm.count() % scene.length) : midiManager.sideButtonRadioNum_ % scene.length;
+    scene[sceneIndex].draw(mainTex, motionGroup.getAllValues());
 
     // debug
-    if(showUI) {
+    if (showUI) {
         drawMotionGroupInfo(motionGroup);
     }
 
+    shader(postShader);
+    postShader.setUniform('u_resolution', [width, height]);
+    postShader.setUniform('u_tex', mainTex);
+    postShader.setUniform('u_uitex', uiTex);
+    postShader.setUniform('u_time', millis() / 1000.0);
+    postShader.setUniform('u_tileNum', floor(midiManager.faderValues_[0] * 5) + 1);
+    postShader.setUniform('u_monochrome', midiManager.faderValues_[1]);
+    postShader.setUniform('u_mosaic', midiManager.faderValues_[2]);
+    postShader.setUniform('u_radius', midiManager.faderValues_[3]);
+
+    rect(0, 0, width, height);
+
     mainTex.clear();
+    uiTex.clear();
 
     midiManager.update();
-
-    motionGroup.setBPM(bpmManager.getBPM());
+    motionGroup.setBPM(gvm.getBPM());
 }
 
+// 白で書いて加算する
 function drawMotionGroupInfo(mg) {
     const margin = 10;
     const lineHeight = 20;
@@ -55,32 +80,34 @@ function drawMotionGroupInfo(mg) {
     const boxH = mg.values.length * lineHeight + 50;
 
     // 背景ボックス（半透明）
-    noStroke();
-    fill(0, 0, 100, 50);
-    rect(margin, margin, boxW, boxH);
+    uiTex.background(0, 0, 0);
+    uiTex.noStroke();
+    uiTex.fill(0, 0, 100, 50);
+    uiTex.rect(margin, margin, boxW, boxH);
 
-    textSize(14);
-    textAlign(LEFT, CENTER);
-    fill(255); // 黒文字（必要に応じて変更）
+    uiTex.textSize(14);
+    uiTex.textAlign(LEFT, CENTER);
+    uiTex.fill(255); // 黒文字（必要に応じて変更）
 
     // BPM表示
-    text(`BPM: ${floor(mg.bpm)}`, margin + 10, margin + 15);
+    uiTex.text(`BPM: ${floor(mg.bpm)}`, margin + 10, margin + 15);
 
     // 各モーションの状態表示
     for (let i = 0; i < mg.values.length; i++) {
         const mode = mg.getCurrentMode(i);
         const val = mg.getValue(i).toFixed(3);
         const y = margin + 40 + i * lineHeight;
-        text(`${i}: ${mode} (${val})`, margin + 10, y);
+        uiTex.text(`${i}: ${mode} (${val})`, margin + 10, y);
     }
-  }
+}
 
-  function midiAssign() {
-      for (let i in midiManager.gridRadioState_) {
-          motionGroup.setModeIndex(i, midiManager.gridRadioState_[i]);
-      }
-  }
+function midiAssign() {
+    for (let i in midiManager.gridRadioState_) {
+        motionGroup.setModeIndex(i, midiManager.gridRadioState_[i]);
+    }
+}
 
+// TODO: キープレスでも変化できるようになっているが、この辺りは変化させる必要あり
 function keyPressed() {
     if (!midiManager.midiSuccess_) {
         const keyNum = parseInt(key); // '1'〜'8' → 1〜8 の数値に変換
@@ -98,7 +125,8 @@ function keyPressed() {
     }
 
     if (keyCode === 13) {
-        bpmManager.tap();
+        gvm.tapTempo();
+        console.log("BPM:", gvm.getBPM().toFixed(2));
     }
 
     // フルスクリーン
@@ -110,10 +138,6 @@ function keyPressed() {
         pushCount++;
     }
 
-    if (key == "z" || key == "Z") {
-        isMonochrome = !isMonochrome;
-    }
-
     if (key == "p" || key == "P") {
         showUI = !showUI;
     }
@@ -122,4 +146,5 @@ function keyPressed() {
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
     mainTex = createGraphics(width, height);
+    uiTex = createGraphics(width, height);
 }

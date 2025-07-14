@@ -3,14 +3,7 @@ class Scene2 {
         tex.push();
         tex.translate(width / 2, height / 2);
 
-        tex.colorMode(HSB, 360, 100, 100);
-
-        const backgroundHue = map(params[0], 0, 1, 0, 360 * 2) % 360;
-        const canvasSaturation = isMonochrome ? 0 : 90;
-        const objectBrightness = isMonochrome ? 0 : 95;
-        const canvasBrightness = 95;
-
-        tex.background(backgroundHue, canvasSaturation, canvasBrightness);
+        tex.background(0);
 
         const canvasScale = map(params[1], 0, 1, 1, 3);
 
@@ -38,7 +31,7 @@ class Scene2 {
                 tex.textAlign(CENTER, CENTER);
                 tex.textSize(lineSize);
                 tex.noStroke();
-                tex.fill((backgroundHue + 180) % 360, canvasSaturation, objectBrightness);
+                tex.fill(cp[floor(this.uNoise(this.uNoise(x) * 4792 + this.uNoise(y) * 1872) * cp.length) | 0]);
                 tex.text(char, 0, 0);
 
                 tex.pop();

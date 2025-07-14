@@ -1,7 +1,6 @@
 class MotionValue {
     constructor(bpm = 120, index = 0) {
         this.index = index; // インデックス（オプション、必要に応じて使用）
-        this.rleap = new Rleap(); // ランダム補間関数（各モードで使用可能）
         this.bpm = bpm;
         this.beatDurationMs = 60000 / bpm; // BPMから1拍の時間を算出
 
@@ -20,12 +19,12 @@ class MotionValue {
         this.modeFuncs = {
             zero: _ => 0,                            // 常に0（定値）
             one: _ => 1,                            // 常に1（定値）
-            linearToggle: t => floor(t * 0.5) % 2,           // 線形トグル（0→1→0...）
-            quantized4Step: t => floor(t % 4) / 4,             // 4ステップに量子化（0→0.25→0.5→0.75）
-            randomStep: t => this.easeClampInOutCubic(this.rleap.get(floor(t))), // 拍ごとのランダムをイージング補間
-            easedHoldStep: t => this.rleap.getWithHold(t * 0.5, 0.25),              // ランダム＋保持ステップ（holdあり）
-            sineSmooth: t => map(sin(t * 0.5 * PI), -1, 1, 0, 1), // sin波（0→1→0）
-            pulse: t => fract(t * 0.5),               // パルス状（0→1→0 の繰り返し）
+            linearToggle: _ => floor(gvm.count() * 0.5) % 2,           // 線形トグル（0→1→0...）
+            quantized4Step: _ => floor(gvm.count() % 4) / 4,             // 4ステップに量子化（0→0.25→0.5→0.75）
+            randomStep: _ => this.easeClampInOutCubic(gvm.getInterpolatedValue("default", 1, 1)), // 拍ごとのランダムをイージング補間
+            easedHoldStep: _ => gvm.getInterpolatedValue("default", 4, 2),              // ランダム＋保持ステップ（holdあり）
+            sineSmooth: _ => map(sin(gvm.count() * 0.5 * PI), -1, 1, 0, 1), // sin波（0→1→0）
+            pulse: _ => fract(gvm.count() * 0.5),               // パルス状（0→1→0 の繰り返し）
         };
     }
 
@@ -49,10 +48,10 @@ class MotionValue {
             this.lastBeat = currentBeat;
         }
 
-        const sp = max(round(midiManager.faderValues_[this.index] * 4), 1) / 4;
-        const t = (elapsed / this.beatDurationMs) * sp;
+        // const sp = max(round(midiManager.faderValues_[this.index] * 4), 1) / 4;
+        // const t = (elapsed / this.beatDurationMs) * sp;
         const func = this.modeFuncs[this.mode] || (x => x); // モード関数が見つからなければ線形代替
-        return func(t);
+        return func();
     }
 
     // 拍の更新時に予約モードがあれば反映
