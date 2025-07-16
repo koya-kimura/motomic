@@ -4,21 +4,19 @@ class Scene7 {
 
         tex.push();
         tex.translate(width/2, height/2);
-        tex.scale(pow(2, floor(params[0] * 3))); // 1, 2, 4, 8倍
-        for(let i = 0; i < 4; i ++){
-            for(let j = 0; j < 4; j ++){
-                const x = map(i, 0, 3, -width/2, width/2);
-                const y = map(j, 0, 3, -height/2, height/2);
-                const r = min(width, height) * 0.1;
-                
-                tex.push();
-                tex.translate(x, y);
-                tex.noStroke();
-                tex.fill(cp[i % cp.length]);
-                tex.ellipse(0, 0, r * 2);
-                tex.pop();
-            }
+        for(let i = 0; i < params.length; i++){
+            const radius = map(params[i], 0, 1, 0.3, 1.0) * min(width, height) * map(Easing.easeInOutSine(abs(gvm.count() % 2 - 1)), 0, 1, 0.3, 0.5);;
+            const sw = min(width, height) * map(sin(TAU * i / params.length + gvm.count() * 2.0), -1, 1, 0.003, 0.05);
+
+            tex.noFill();
+            tex.stroke(cp[i % cp.length]);
+            tex.strokeWeight(sw);
+            tex.ellipse(0, 0, radius * 2, radius * 2);
         }
         tex.pop();
+    }
+
+    resize() {
+
     }
 }

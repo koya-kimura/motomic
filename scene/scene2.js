@@ -20,7 +20,7 @@ class Scene2 {
         for (let x = -fullSize / 2 + cellSize / 2; x <= fullSize / 2; x += cellSize) {
             for (let y = -fullSize / 2 + cellSize / 2; y <= fullSize / 2; y += cellSize) {
                 const offsetY = fract(millis() * 0.0005) * cellSize;
-                const offsetX = params[3] * cellSize;
+                const offsetX = cellSize;
                 const charIndex = floor(map(params[4], 0, 1, 0, chars.length-1));
                 const char = chars[charIndex];
 
@@ -30,8 +30,14 @@ class Scene2 {
 
                 tex.textAlign(CENTER, CENTER);
                 tex.textSize(lineSize);
-                tex.noStroke();
-                tex.fill(cp[floor(this.uNoise(this.uNoise(x) * 4792 + this.uNoise(y) * 1872) * cp.length) | 0]);
+                if (params[3] > 0.5){
+                    tex.noStroke();
+                    tex.fill(cp[floor(this.uNoise(this.uNoise(x) * 4792 + this.uNoise(y) * 1872) * cp.length) | 0]);
+                } else {
+                    tex.stroke(cp[floor(this.uNoise(this.uNoise(x) * 4792 + this.uNoise(y) * 1872) * cp.length) | 0]);
+                    tex.noFill();
+                }
+                tex.textFont("Noto Sans JP");
                 tex.text(char, 0, 0);
 
                 tex.pop();
@@ -56,5 +62,9 @@ class Scene2 {
         }
 
         return value;
+    }
+
+    resize() {
+
     }
 }

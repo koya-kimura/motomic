@@ -16,9 +16,11 @@ class Circle {
     }
 
     // 円を移動させ、画面外に出たら再配置する
-    moveAndRespawn() {
-        this.x += this.vx;
-        this.y += this.vy;
+    moveAndRespawn(sp) {
+        const vx = this.vx * sp; // スピードを掛ける
+        const vy = this.vy * sp;
+        this.x += vx;
+        this.y += vy;
         this.x -= Scene3.FLOW_FORCE; // 右から左へ流れる力を加える
 
         // 左端からフレームアウトしたら右端から再生成 (中央が0,0の座標系)
@@ -106,7 +108,7 @@ class Circle {
         const sp = map(pow(noise(this.seed), 0.5), 0, 1, 0.005, 0.03); // 調整
 
         tex.noStroke();
-        tex.fill(this.c); // ランダムな色相、彩度80、明度100で塗りつぶし
+        tex.fill(this.c);
         tex.push();
         tex.translate(this.x, this.y);
         tex.rotate(-frameCount * sp);
@@ -167,12 +169,18 @@ class Scene3 {
     }
 
     // 全ての円の状態を更新し、描画する
-    draw(tex) {
+    draw(tex, params) {
+        const angle = params[0] * PI * 0.5;
+        const scl = map(params[1], 0, 1, 1, 3); // キャンバスサイズに応じてスケール
+
+        // if(params[3] > 0.5) tex.background(cp[floor(gvm.count()) % cp.length]); // 背景色を設定 (GVMのカウントに基づく)
         tex.push();
         tex.translate(width / 2, height / 2); // キャンバスの中心を原点に設定
+        tex.rotate(angle); // キャンバスサイズに応じてスケール
+        tex.scale(scl);
         for (let i = 0; i < this.circles.length; i++) {
             let c1 = this.circles[i];
-            c1.moveAndRespawn(); // 移動と再配置
+            c1.moveAndRespawn(map(pow(params[2], 3), 0, 1, 1, 10)); // 移動と再配置
             c1.checkWallCollision(); // Y軸の壁衝突チェック
 
             // 他の円との衝突をチェック (二重チェックを避けるため j = i + 1 から開始)
@@ -180,10 +188,15 @@ class Scene3 {
                 let c2 = this.circles[j];
                 c1.checkCircleCollision(c2);
             }
-
             c1.display(tex); // 円を描画
         }
         tex.pop();
+    }
+
+    colorPaletteUpdate(){
+        for (let i = 0; i < this.circles.length; i++) {
+            this.circles[i].c = random(cp); // 各円の色をランダムに更新
+        }
     }
 
     // ウィンドウサイズ変更時に円の位置とサイズを調整 (中央が0,0の座標系)
@@ -221,5 +234,9 @@ class Scene3 {
         }
 
         return value;
+    }
+
+    resize() {
+
     }
 }

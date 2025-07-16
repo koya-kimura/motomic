@@ -10,6 +10,22 @@ class Scene5 {
         this.flowManager.update();
         this.flowManager.draw(tex, params);
     }
+
+    colorPaletteUpdate() {
+        this.flowManager.blocks.forEach(block => {
+            block.cells.forEach(cell => {
+                cell.c1 = random(cp);
+                const others = cp.filter(c => c !== cell.c1);
+                cell.c2 = others.length > 0 ? random(others) : cell.c1
+            }
+            );
+        });
+    }
+
+
+    resize() {
+        this.flowManager = new FlowManager();
+    }
 }
 
 function easeInOutSine(t) {
@@ -19,12 +35,57 @@ function easeInOutSine(t) {
 // === 各パターンの描画戦略 ===
 class HorizontalSlide {
     draw(tex, params, cell, progress) {
+        const w = min(cell.width, cell.height);
+
+        const h = map(params[4], 0, 1, 0.3, 0.8) * cell.height;
+        const y = map(Easing.easeInOutQuint(abs((gvm.count() + (this.uNoise(cell.seed) > 0.5)) % 2 - 1)), 0, 1, 0, cell.height - h);
+        tex.push();
+        tex.noStroke();
+        tex.fill(red(cell.c1), green(cell.c1), blue(cell.c1), Easing.easeInOutQuint(map(params[6], 0, 1, 1, 0.2)) * 255);
+        tex.rect(0, y, cell.width, h);
+        tex.pop();
+
+        const rectScale = params[1];
+        tex.push();
+        tex.noStroke();
+        tex.fill(red(cell.c2), green(cell.c2), blue(cell.c2), Easing.easeInOutQuint(map(params[7], 0, 1, 1, 0.2)) * 255);
+        tex.rect(0, 0, cell.width, cell.height * rectScale);
+        tex.pop();
+
+        const scaleWeight = map(params[0], 0, 1, 0.5, 1);
+        const arr = ["流", "場", "音", "拍", "動"]
+        const index = floor((this.uNoise(cell.seed) * arr.length + (fract(gvm.count()) > 0.5) * floor(frameCount) * params[2])) % arr.length;
         tex.push();
         tex.translate(cell.width * 0.5, cell.height * 0.5);
+        if(cell.width > cell.height){
+            tex.scale(cell.width / w * scaleWeight, 1);
+        } else {
+            tex.scale(1, cell.height / w * scaleWeight);
+        }
         tex.noStroke();
-        tex.fill(cell.color);
-        tex.circle(0, 0, min(cell.width, cell.height) * map(params[0], 0, 1, 0, 0.8));
+        tex.fill(0, params[5] * 255);
+        tex.textAlign(CENTER, CENTER);
+        tex.textSize(w);
+        tex.textFont("Noto Sans JP");
+        tex.text(arr[index], 0, 0);
         tex.pop();
+    }
+
+    uNoise(seed) {
+        // 現在の random 状態を保存
+        const currentState = randomSeed.__state || null;
+
+        // 決定的にする
+        randomSeed(seed);
+        const value = random();
+
+        // 状態を復元
+        if (currentState !== null) {
+            // randomSeed() を上書きする前に random() を呼ぶことで擬似的に戻す
+            randomSeed(currentState);
+        }
+
+        return value;
     }
 }
 
@@ -84,10 +145,6 @@ class CellData {
         tex.push();
         tex.translate(drawX, drawY);
 
-        tex.noStroke();
-        tex.fill(this.c1);
-        tex.rect(0, 0, drawW, drawH);
-
         tex.fill(this.c2);
         PatternManager.draw(
             tex,
@@ -98,7 +155,8 @@ class CellData {
             gridW: this.gridW,
             gridH: this.gridH,
             seed: this.seed,
-            color: this.c2
+            c1: this.c1,
+            c2: this.c2
         },
             this.pattern,
             progress

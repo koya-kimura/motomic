@@ -1,13 +1,12 @@
 class Scene4 {
     draw(tex, params) {
-        this.updateSceneState(); // シーンの状態を更新
+        this.updateSceneState(params); // シーンの状態を更新
         this.renderScene(tex); // シーンを描画
     }
 
     constructor() {
         this.gridElements = []; // グリッド上に配置される個々の描画要素のデータ配列
         this.currentGridDensity = null; // グリッドの現在の行/列数 (例: 3x3, 5x5)
-        this.shouldShowRandomly = false; // 各要素をランダムに表示するかどうかのフラグ
         this.isWavyMotionEnabled = false; // 要素の波打つ動きが有効かどうかのフラグ
         this.displaySequenceRatio = 1; // 要素の表示シーケンス速度を調整する比率
         this.backgroundColor = null; // 現在の背景色
@@ -41,25 +40,28 @@ class Scene4 {
     }
 
     // シーン全体の初期状態（グリッドパターン、オブジェクトタイプ、動きの有無など）を設定
-    initializeSceneState() {
-        this.currentObjectType = random(["circle", "rectangle", "text"]);
-        this.textForObject = random(["HELLO", "MORNING", "p5js"]);
+    initializeSceneState(params = [0, 0, 0, 0, 0, 0, 0, 0]) {
+        this.currentObjectType = params[0] < 0.5 ? "circle" : random(["circle", "rectangle", "text"]);
+        this.textForObject = 0.5 > params[1] ? "START" : random(["HELLO", "MORNING", "p5js"]);
         this.objectBaseScale = random() < 0.8 ? 1 : random(0.5, 0.9);
-        this.hasHorizontalOffset = random() < 0.5;
-        this.shouldShowRandomly = random() < 0.3;
-        this.isWavyMotionEnabled = random() < 0.4;
+        this.hasHorizontalOffset = false; // イマイチわからん
+        this.isWavyMotionEnabled = random() < params[2]; // 波打つ動きの有無をパラメータで制御
         this.displaySequenceRatio = random() < 0.5 ? 1 : random(0.3, 0.8);
 
         this.currentGridDensity = floor(random(1, 3)) * 2 + 1; // 1, 3, 5 のいずれかになるように
 
         // 黒目回転と個別オブジェクト回転/スケールの排他制御
         // 50%の確率でどちらか一方のアニメーションを有効にする
-        if (random() < 0.5) {
+        const moveMode = params[3] < 0.5 ? "none" : random(["eyeMovement", "objectRotation", "none"]);
+        if (moveMode === "eyeMovement") {
             this.isEyeMovementEnabled = true; // 黒目回転を有効
             this.isObjectRotationEnabled = false; // 個別オブジェクト回転・Yスケールを無効
-        } else {
+        } else if (moveMode === "objectRotation") {
             this.isEyeMovementEnabled = false; // 黒目回転を無効
             this.isObjectRotationEnabled = true; // 個別オブジェクト回転・Yスケールを有効
+        } else {
+            this.isEyeMovementEnabled = false; // 黒目回転を無効
+            this.isObjectRotationEnabled = false; // 個別オブジェクト回転・Yスケールを無効
         }
 
         // 単一列/行の場合の中心位置またはランダムなオフセット
@@ -67,7 +69,7 @@ class Scene4 {
         let numColumns = this.currentGridDensity;
         let numRows = this.currentGridDensity;
 
-        const layoutType = random(["horizontal", "vertical", "grid"]); // グリッドのレイアウトタイプ
+        const layoutType = params[4] < 0.5 ? "horizontal" : random(["horizontal", "vertical", "grid"]); // グリッドのレイアウトタイプ
         if (layoutType === "horizontal") numRows = 1;
         if (layoutType === "vertical") numColumns = 1;
 
@@ -86,7 +88,7 @@ class Scene4 {
 
         // グリッド要素の表示モードを決定
         // "random", "sequential", "centerOut" のいずれかを選択
-        const mode = random(["random", "sequential", "centerOut"]);
+        const mode = params[5] < 0.5 ? "sequential" : random(["random", "sequential", "centerOut"]);
 
         if (mode === "random") {
             // ランダムにシャッフル
@@ -119,12 +121,14 @@ class Scene4 {
 
     // 利用可能な色から背景色とオブジェクト色をランダムに選択
     assignSceneColors() {
-        let tempColors = ["#F15946", "#5681CB", "#FAAA2D", "#296647", "#453945"];
+        let tempColors = [...cp];
 
         // 1色目を選択し、配列から削除
         let firstColorIndex = floor(random(tempColors.length));
         this.backgroundColor = tempColors[firstColorIndex];
         tempColors.splice(firstColorIndex, 1);
+
+        if (tempColors.length === 0) tempColors = [color(255 - red(this.backgroundColor), 255 - green(this.backgroundColor), 255 - blue(this.backgroundColor))]; // 背景色の補色を使用
 
         // 残りの配列から2色目を選択
         let secondColorIndex = floor(random(tempColors.length));
@@ -132,11 +136,11 @@ class Scene4 {
     }
 
     // シーンの状態を更新（アニメーションのサイクルごとに呼び出される）
-    updateSceneState() {
+    updateSceneState(params) {
         // ANIMATION_CYCLE_FRAMESの周期でグリッドパターンと色を更新
         this.nowCount = floor(gvm.count()); // 現在のアニメーションサイクルのカウント
         if (this.nowCount !== this.preCount) {
-            this.initializeSceneState(); // シーンの状態を再初期化
+            this.initializeSceneState(params); // シーンの状態を再初期化
             this.assignSceneColors();    // 色を再割り当て
             this.preCount = this.nowCount; // 前回のカウントを更新
         }
@@ -225,7 +229,7 @@ class Scene4 {
 
 
             // 正規化された全体進行度と要素ごとのしきい値に基づいて表示を判断
-            if (fract(gvm.count()) > itemDisplayThreshold || this.gridElements.length === 1 || this.shouldShowRandomly) {
+            if (fract(gvm.count()) > itemDisplayThreshold || this.gridElements.length === 1) {
                 tex.push();
                 tex.noStroke();
                 tex.fill(this.objectFillColor);
@@ -261,6 +265,10 @@ class Scene4 {
             // デフォルトの描画（予期せぬcurrentObjectTypeの場合）
             tex.circle(0, 0, size);
         }
+    }
+
+    resize() {
+
     }
 }
 

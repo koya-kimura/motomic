@@ -14,13 +14,13 @@ class Scene1 {
         tex.rotate(canvasAngle);
         tex.scale(canvasScale);
 
-        const gridCount = 8;
+        const gridCount = 5;
         const fullSize = max(tex.width, tex.height) * sqrt(2);
         const cellSize = fullSize / gridCount;
         const lineLength = cellSize * map(params[3], 0, 1, 0.2, 1.0); // 線の長さ
         const offsetFactor = params[6];
         const noiseFactor = params[7];
-        const lineSize = map(params[2], 0, 1, 1, cellSize); // 線の太さ
+        const lineSize = map(params[2], 0, 1, cellSize, 1); // 線の太さ
 
         // 全体の移動説ある、、？ 別シーンとの棲み分けかも
 
@@ -62,5 +62,9 @@ class Scene1 {
         }
 
         return value;
+    }
+
+    resize(){
+
     }
 }

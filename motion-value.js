@@ -9,22 +9,31 @@ class MotionValue {
 
         this.modeRequest = null;   // モード切り替え予約（拍ごとに反映）
 
-        this.setupModeFuncs();            // モードごとの関数群を定義
+        this.gvmSetting(); // GVMの設定を初期化
+        this.setupModeFuncs(this.index);            // モードごとの関数群を定義
         this.modes = Object.keys(this.modeFuncs); // モード名一覧（indexアクセス用）
         this.mode = this.modes[0];        // 初期モード（最初のモード名）
     }
 
+    gvmSetting(){
+        for(let i = 0; i < 8; i++) {
+            for(let j = 0; j < 8; j ++){
+                gvm.setSlot(`motionValue_${i}_${j}`, { mode : "float", divisions : 4, value : [0.25, 0.5, 0.75] });
+            }
+        }
+    }
+
     // 各モードごとの値の動き方（t: 拍単位の経過時間）
-    setupModeFuncs() {
+    setupModeFuncs(index = 0) {
         this.modeFuncs = {
-            zero: _ => 0,                            // 常に0（定値）
-            one: _ => 1,                            // 常に1（定値）
-            linearToggle: _ => floor(gvm.count() * 0.5) % 2,           // 線形トグル（0→1→0...）
-            quantized4Step: _ => floor(gvm.count() % 4) / 4,             // 4ステップに量子化（0→0.25→0.5→0.75）
-            randomStep: _ => this.easeClampInOutCubic(gvm.getInterpolatedValue("default", 1, 1)), // 拍ごとのランダムをイージング補間
-            easedHoldStep: _ => gvm.getInterpolatedValue("default", 4, 2),              // ランダム＋保持ステップ（holdあり）
-            sineSmooth: _ => map(sin(gvm.count() * 0.5 * PI), -1, 1, 0, 1), // sin波（0→1→0）
-            pulse: _ => fract(gvm.count() * 0.5),               // パルス状（0→1→0 の繰り返し）
+            Zero: _ => 0,                            // 常に0（定値）
+            One: _ => 1,                            // 常に1（定値）
+            Pulse: _ => fract(gvm.count() * 0.5),               // パルス状（0→1→0 の繰り返し）
+            Zigzag: _ => floor(gvm.count() * 0.5) % 2,           // 線形トグル（0→1→0...）
+            Sine: _ => map(sin(gvm.count() * 0.5 * PI), -1, 1, 0, 1), // sin波（0→1→0）
+            FourStep: _ => floor(gvm.count() % 4) / 4,             // 4ステップに量子化（0→0.25→0.5→0.75）
+            RandomEase: _ => this.easeClampInOutCubic(gvm.getInterpolatedValue(`motionValue_${4}_${index}`, 2, 2)), // 拍ごとのランダムをイージング補間
+            HoldNoise: _ => gvm.getInterpolatedValue(`motionValue_${5}_${index}`, 2, 1),              // ランダム＋保持ステップ（holdあり）
         };
     }
 
